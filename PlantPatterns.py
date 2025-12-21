@@ -1,6 +1,32 @@
 import Pathfinding
 import Utils
+import MegafarmHelpers
+	
+def megaFarmPumpkin():
+	MegafarmHelpers.spawnDronesWithTasks(MegafarmHelpers.plantRowPumpkin, North, False)
+	
+	MegafarmHelpers.spawnDronesWithTasks(MegafarmHelpers.reCheckPumpkin, East, False)
+	
+	MegafarmHelpers.waitForAllDrones()
+	
+	harvest()
 
+def megaFarmCacti():
+	MegafarmHelpers.spawnDronesWithTasks(MegafarmHelpers.plantRowCacti, North)
+		
+	if (get_pos_x() == 0) and (get_pos_y() == 0):
+		# Sort each row, largest to the East
+		MegafarmHelpers.spawnDronesWithTasks(Pathfinding.cocktailSortEast, North, False)
+		MegafarmHelpers.waitForAllDrones()
+			
+		# Sort each column, largest to the North
+		MegafarmHelpers.spawnDronesWithTasks(Pathfinding.cocktailSortNorth, East, False)
+		MegafarmHelpers.waitForAllDrones()
+			
+		# Once we are out of both bubble sort loops, we know the entire farm is sorted
+		Pathfinding.returnToStart()
+		Utils.harvestIfAppropriate()
+		
 def runMaze(mazeSize = get_world_size()):
 	substanceCost = mazeSize * 2**(num_unlocked(Unlocks.Mazes) - 1)
 	if num_items(Items.Weird_Substance) >= substanceCost:
@@ -46,7 +72,6 @@ def dinosaur():
 		if (success == False):
 			change_hat(Hats.Wizard_Hat)
 			clear()
-	
 	
 def plantPumpkin():
 	passNo = 0
@@ -110,7 +135,6 @@ def plantSunflower():
 	# Do an initial pass and plant everything
 	Utils.tillIfAppropriate()
 	plant(Entities.Sunflower)
-	use_item(Items.Fertilizer)
 	Utils.waterIfAppropriate()
 	Pathfinding.moveToNext()
 	if (get_pos_x() == 0) and (get_pos_y() == 0):
@@ -132,7 +156,6 @@ def plantSunflower():
 				Utils.harvestIfAppropriate()
 				
 		Pathfinding.returnToStart()
-	
 	
 def plantAll():
 	Utils.harvestIfAppropriate()
