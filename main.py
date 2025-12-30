@@ -12,11 +12,11 @@ def plantPattern(mode):
 	if(mode == MODE_ALL):
 		PlantPatterns.plantAll()
 	elif(mode == MODE_PUMPKIN):
-		PlantPatterns.plantPumpkin()
+		PlantPatterns.megaFarmPumpkin()
 	elif(mode == MODE_SUNFLOWER):
 		PlantPatterns.plantSunflower()
 	elif(mode == MODE_CACTUS):
-		PlantPatterns.plantCactus()
+		PlantPatterns.megaFarmCacti()
 	elif(mode == MODE_DINOSAUR):
 		PlantPatterns.dinosaur()
 	elif(mode == MODE_COMPANION):
@@ -28,7 +28,7 @@ if __name__ == "__main__":
 	change_hat(Hats.Wizard_Hat)
 	clear()
 	while(True):
-		plantPattern(MODE_MAZE)
+		plantPattern(MODE_COMPANION)
 
 		
 

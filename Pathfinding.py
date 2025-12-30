@@ -220,10 +220,21 @@ def bubbleSort(direction, axis):
 		else:
 			move(East)
 			
+# Zero param wrapper for cocktail sort to enable megafarm
+def cocktailSortEast():
+	cocktailSort(East, X_AXIS, False)
+	
+# Zero param wrapper for cocktail sort to enable megafarm
+def cocktailSortNorth():
+	cocktailSort(North, Y_AXIS, False)
+			
 # Modified Bubble Sort algorithm, sorts in both directions rather than returning to
 # the start of each row every iteration, same time complexity but faster actual timing
-def cocktailSort(direction, axis):
-	for rowColCount in range(get_world_size()):
+def cocktailSort(direction, axis, traverse = True):
+	count = 1
+	if (traverse):
+		count = get_world_size()
+	for rowColCount in range(count):
 		swapped = True
 		start = 0
 		end = get_world_size() - 1
@@ -255,13 +266,14 @@ def cocktailSort(direction, axis):
 			start = start + 1
 			move(direction)
 			
-		# Move to next starting pos
-		if(axis == X_AXIS):
-			goto(0, rowColCount)
-			move(North)
-		else:
-			goto(rowColCount, 0)
-			move(East)
+		if(traverse):
+			# Move to next starting pos
+			if(axis == X_AXIS):
+				goto(0, rowColCount)
+				move(North)
+			else:
+				goto(rowColCount, 0)
+				move(East)
 	
 # Sends the drone to the given (x,y) coordinate by traversing along the x axis, then
 # the y axis, will optionally go off the end of the farm when faster if useInverse is true
