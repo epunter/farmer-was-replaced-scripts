@@ -22,13 +22,13 @@ def plantPattern(mode):
 	elif(mode == MODE_COMPANION):
 		PlantPatterns.plantCompanions()
 	elif(mode == MODE_MAZE):
-		PlantPatterns.runMaze()
+		PlantPatterns.runMaze(5)
 		
 if __name__ == "__main__":
 	change_hat(Hats.Wizard_Hat)
 	clear()
 	while(True):
-		plantPattern(MODE_COMPANION)
+		plantPattern(MODE_MAZE)
 
 		
 
