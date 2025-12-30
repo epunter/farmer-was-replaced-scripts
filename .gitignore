@@ -1,0 +1,10 @@
+*
+
+!.gitignore
+!main.py
+!Math.py
+!MegafarmHelpers.py
+!Pathfinding.py
+!PlantPatterns.py
+!todo.py
+!Utils.py
