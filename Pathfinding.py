@@ -4,6 +4,7 @@ import Utils
 oppositeDir = {East:West, West:East, North:South, South:North}
 directions = [North, East, West, South]
 deltaDirections = {North:(0,1), East:(1,0), South:(0,-1), West:(-1,0)}
+defaultWalls = {North:True, East:True, West:True, South:True}
 X_AXIS = 'x'
 Y_AXIS = 'y'
 
@@ -38,11 +39,10 @@ def solveMaze(substanceCost):
 	
 # Uses the provided walls dictionary to create and navigate a path through the current maze
 def findTreasure(walls):
-	# Once we have all the walls mapped we can use an informed dfs or A*
-	# algorithm to create all the steps we need to reach the treasure for a given maze
+	# Once we have all the walls mapped we can use A* algorithm to create all the steps 
+	# we need to reach the treasure for a given maze
 	targetCoords = measure()
 	startCoords = get_pos_x(), get_pos_y()
-	#stack = getDfsPathStack(startCoords, targetCoords, walls)
 	stack = getAStarPathStack(startCoords, targetCoords, walls)
 		
 	# Once we have our stack, perform each of the given directions until we've solved it
@@ -51,22 +51,18 @@ def findTreasure(walls):
 		move(next_move)
 		for dir in directions:
 			walls[(get_pos_x(), get_pos_y())][dir] = can_move(dir)
-		
+
 # Calculates and returns a stack of directions using an A* pathfinding algorithm
 def getAStarPathStack(startCoords, targetCoords, walls):
-	# We will use a MinHeap structure to automatically keep the smallest f score at the start
-	# of our list of identified nodes
-	minHeap = []
-	Utils.minHeapInsert(minHeap, (0, 0, startCoords[0], startCoords[1]))
-	
-	gScore = {startCoords:0}
-	hStart = abs(startCoords[0] - targetCoords[0]) + abs(startCoords[1] - targetCoords[1])
+	# Priority Queue - list of (fScore, gScore, x, y)
+	pQueue = [(0, 0, (startCoords[0], startCoords[1]))]
+
+	gScore = {startCoords: 0}
 	cameFrom = {}
-	
-	while len(minHeap) > 0:
-		# Pop our next position from the MinHeap, this will be the node with the smallest f Score
-		currentF, currentG, currentX, currentY = Utils.minHeapPop(minHeap)
-		current = (currentX, currentY)
+
+	while len(pQueue) > 0:
+		# We keep the list sorted so index 0 is always the best
+		currentF, currentG, current = pQueue.pop(0)
 
 		# If our current position is the treasure, iterate backwards through our path and append
 		# to the stack so we can pass to movement code
@@ -77,73 +73,48 @@ def getAStarPathStack(startCoords, targetCoords, walls):
 				path.append(move)
 				current = prev
 			return path
-		
+
 		# Get the current state of walls for the current tile
-		curWalls = walls[current]
-		
+		curWalls = Utils.safeGet(walls, current, defaultWalls)
+
 		for direction in deltaDirections:
-			if curWalls[direction]:
-				# If we are able to traverse in the given direction, get the neighbour of the current tile
-				neighbour = (currentX + deltaDirections[direction][0], currentY + deltaDirections[direction][1])
-				
-				# tentativeG is the cost to get to neighbour via current tile
-				tentativeG = currentG + 1
-				
-				if tentativeG < Utils.safeGet(gScore, neighbour, 99999):
-					# If this path is better than any previous one to neighbour, then overwrite gscore
-					gScore[neighbour] = tentativeG
-					
-					# Calculate heuristic and fscore
-					hScore = (abs(neighbour[0] - targetCoords[0]) + abs(neighbour[1] - targetCoords[1])) * 1.001
-					fScore = tentativeG + hScore
-					
-					# Insert into the minheap and append to our current traversal
-					Utils.minHeapInsert(minHeap, (fScore, tentativeG, neighbour[0], neighbour[1]))
-					cameFrom[neighbour] = (current, direction)
-					
-	# If we exit the while without identifying a path, then there's no path to the treasure	
-	return []
-	
-# Calculates and returns a stack of directions using a Depth-First Search algorithm
-def getDFSPathStack(startCoords, targetCoords, walls):
-	# Store our coordinates to traverse in a list and our travel history in a dict
-	queue = [startCoords]
-	cameFrom = {startCoords:None}
-	
-	while len(queue) > 0:
-		current = queue.pop()
-		
-		# If our current position is the treasure, iterate backwards through our path and append
-		# to the stack so we can pass to movement code
-		if current == targetCoords:
-			pathStack = []
-			curr = targetCoords
-			while curr != startCoords:
-				prev, moveDirection = cameFrom[curr]
-				pathStack.append(moveDirection)
-				curr = prev
-		
-			return pathStack
+			# Check walls first to avoid calculations if blocked
+			# Assuming True is default passable
+			is_passable = Utils.safeGet(curWalls, direction, True)
+			if not is_passable:
+				continue
+
+			# If we are able to traverse in the given direction, get the neighbour of the current tile
+			neighbour = (current[0] + deltaDirections[direction][0], current[1] + deltaDirections[direction][1])
 			
-		# Get the state of walls for the current tile
-		curWalls = walls[current]
-		
-		x, y = current
-		for direction in deltaDirections:
-			if curWalls[direction]:
-				# If we are able to traverse in the given direction, get the neighbour of the current tile
-				neighbour = (x + deltaDirections[direction][0], y + deltaDirections[direction][1])
+			# tentativeG is the cost to get to neighbour via current tile
+			tentativeG = currentG + 1
+
+			if neighbour not in gScore or tentativeG < Utils.safeGet(gScore, neighbour, 99999):
+				# If this path is better than any previous one to neighbour, then overwrite gscore
+				gScore[neighbour] = tentativeG
 				
-				# If the neighbour of the current tile hasn't been traversed before, add it to the
-				# queue and log it in the history
-				if neighbour not in cameFrom:
-					queue.append(neighbour)
-					cameFrom[neighbour] = (current, direction)
+				# Calculate heuristic and fscore
+				hScore = (abs(neighbour[0] - targetCoords[0]) + abs(neighbour[1] - targetCoords[1])) * 1.001
+				fScore = tentativeG + hScore
 				
-	# If we exit the while without identifying a path, then there's no path to the treasure	
+				# Find the next highest and keep the list sorted by f score
+				newEntry = (fScore, tentativeG, neighbour)
+				inserted = False
+				for i in range(len(pQueue)):
+					if fScore < pQueue[i][0]:
+						pQueue.insert(i, newEntry)
+						inserted = True
+						break
+				if not inserted:
+					pQueue.append(newEntry)
+				
+				cameFrom[neighbour] = (current, direction)
+
+	# If we exit the while without identifying a path, then there's no path to the treasure
 	return []
-	
-# Recursive function to explore all paths for a given maze and log where the walls are
+
+	# Recursive function to explore all paths for a given maze and log where the walls are
 def explorePath(direction, walls):
 	# Attempt to move in the given direction, returning early if we're not able to
 	if not move(direction):
@@ -170,28 +141,95 @@ def explorePath(direction, walls):
 			return True
 	# If we reach a dead end, we need to return the opposite way to explore the other paths
 	move(oppositeDir[direction])
+	
 
+def playSnake():
+	current_path = []
+	saved_target = None
+	tail_history = []
+	current_length = 0
+	# Heuristic - only use A* if we fill less than 10% of the board.
+	max_length = (get_world_size()**2)*0.1
 
-# Moves in a pattern such that in a game of snake, we will always survive.
-# Ignores column 0 and traverses in a snaking pattern up the y axis, until reaching
+	while True:
+		# measure() returns None if called a multiple times
+		# Only update saved_target if we get a real reading.
+		scan_result = measure()
+		if scan_result != None:
+			saved_target = scan_result
+			# New target found implies old path is invalid or we just finished one
+			current_path = [] 
+			
+		if len(current_path) == 0 and saved_target != None:
+			if len(tail_history) < max_length:
+				walls = constructWallsFromHistory(tail_history)
+				current_path = getAStarPathStack((get_pos_x(), get_pos_y()), saved_target, walls)
+
+		move_successful = False
+		
+		# Try to use the cached A* path
+		if len(current_path) > 0:
+			next_move = current_path.pop()
+			
+			# safety check: is this specific move blocked?
+			if can_move(next_move): 
+				move(next_move)
+				move_successful = True
+			else:
+				# The path is blocked/invalid. Discard it.
+				current_path = []
+		
+		# If the path failed, was empty, or we are too big for A*
+		if not move_successful:
+			current_path = [] # Clear bad paths
+			move_successful = hamiltonianCycle()
+			
+		# If the move still isn't successful, we've died
+		if not move_successful:
+			break
+
+		# Update tail history for the next A* calculation
+		current_pos = (get_pos_x(), get_pos_y())
+		tail_history.append(current_pos)
+		
+		# If we reached the target, increment length
+		if current_pos == saved_target:
+			current_length += 1
+			saved_target = None # Reset target so we look for a new one
+			
+		# Keep history trimmed to actual size
+		while len(tail_history) > current_length:
+			tail_history.pop(0)
+
+def constructWallsFromHistory(last_movements):
+	walls = {}
+	for move in last_movements:
+		for dir in deltaDirections:
+			neighbour = (move[0] + deltaDirections[dir][0], move[1] + deltaDirections[dir][1])
+			if (neighbour not in walls):
+				walls[neighbour] = {}
+			walls[neighbour][oppositeDir[dir]] = False
+	return walls
+
+# Moves in a pattern that traverses every tile on the grid,
+# ignoring column 0 and traverses in a snaking pattern up the y axis, until reaching
 # the top left, where we traverse south to 0,0
 # NOTE: Only works when get_world_size() is even!
 # v < < <
 # v > > ^
 # v ^ < <
 # > > > ^
-def playSnake():
+def hamiltonianCycle():
 	if(get_pos_y() == get_world_size() - 1) and (get_pos_x() == 1):
-		# If we arrive in the top left (column 1, row world_size), then move West into column 0
-		# and move South until back at 0,0
-		move(West)
-		for _ in range(get_world_size() - 1):
-			move(South)
-		return True
-	# If the if the row we're in is even, move East until we're at world_size
+		return move(West)
+	elif (get_pos_x() == 0):
+		# Handle the return trip down column 0 one step at a time
+		if get_pos_y() > 0:
+			return move(South)
+		else:
+			return move(East) # Back at 0,0, restart
 	elif(get_pos_y() % 2 == 0) and (get_pos_x() != get_world_size() - 1):
 		return move(East)
-	# If the row we're in is odd, move West until we reach column 1
 	elif(get_pos_y() % 2 != 0) and (get_pos_x() > 1):
 		return move(West)
 	else:

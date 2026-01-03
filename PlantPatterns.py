@@ -67,11 +67,10 @@ def dinosaur():
 	# Very naive approach, currently will just move in a pattern to stay completely
 	# safe regardless of tail size, quite slow but reliable
 	# TODO optimise for small tail sizes?
-	while success == True:
-		success = Pathfinding.playSnake()
-		if (success == False):
-			change_hat(Hats.Wizard_Hat)
-			clear()
+	Pathfinding.playSnake()
+	
+	change_hat(Hats.Wizard_Hat)
+	clear()
 	
 def plantPumpkin():
 	passNo = 0
